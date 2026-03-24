@@ -54,7 +54,11 @@ app = FastAPI(title="Calories Tracker API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://calories-tracker-ten.vercel.app/"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://calories-tracker-ten.vercel.app",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
