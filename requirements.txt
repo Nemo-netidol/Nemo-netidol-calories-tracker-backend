@@ -1,0 +1,6 @@
+pydantic
+fastapi[standard]
+sqlmodel
+pymysql
+python-dotenv
+cryptography
