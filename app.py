@@ -74,7 +74,10 @@ def get_foods(session: Session = Depends(get_session)):
 
 @app.post("/foods", response_model=FoodItem)
 def add_food(item_create: FoodItemCreate, session: Session = Depends(get_session)):
-    db_item = FoodItem.model_validate(item_create)
+    # Dump item to dict, excluding fields that weren't set by the frontend
+    # This allows SQLModel's default_factory to work for date/time if those were missing
+    data = item_create.model_dump(exclude_unset=True)
+    db_item = FoodItem(**data)
     session.add(db_item)
     session.commit()
     session.refresh(db_item)
