@@ -79,12 +79,13 @@ def verify_session(calories_tracker_session: Optional[str] = Cookie(None)):
 @app.post("/auth/login")
 def auth_login(login_data: LoginRequest, response: Response):
     if login_data.password == APP_PASSWORD:
+        # For cross-site (Render <-> Vercel), we MUST use samesite="none" and secure=True
         response.set_cookie(
             key=SESSION_COOKIE_NAME,
             value="authenticated",
             httponly=True,
-            samesite="lax",
-            secure=False,
+            samesite="none",
+            secure=True,
             max_age=86400 * 30
         )
         return {"ok": True, "message": "Login successful"}
@@ -99,7 +100,11 @@ def auth_check(calories_tracker_session: Optional[str] = Cookie(None)):
 
 @app.post("/auth/logout")
 def auth_logout(response: Response):
-    response.delete_cookie(SESSION_COOKIE_NAME)
+    response.delete_cookie(
+        SESSION_COOKIE_NAME,
+        samesite="none",
+        secure=True
+    )
     return {"ok": True}
 
 @app.get("/")
