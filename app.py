@@ -2,12 +2,13 @@ import os
 import urllib.parse
 from contextlib import asynccontextmanager
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, Response, Request, Cookie
+from fastapi import FastAPI, Depends, HTTPException, Response, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Session, create_engine, select
 from dotenv import load_dotenv
 import certifi
 from pydantic import BaseModel
+import secrets
 
 from models import FoodItem, FoodItemCreate
 
@@ -66,45 +67,47 @@ app.add_middleware(
 )
 
 # Authentication Config
-SESSION_COOKIE_NAME = "calories_tracker_session"
+# Since cross-site cookies are blocked by Safari ITP, we will use a Bearer token.
+# For simplicity, we use the APP_PASSWORD as the token since this is a personal tracker.
+# In a real app, this would be a signed JWT or a random session token.
+AUTH_TOKEN = APP_PASSWORD 
 
 class LoginRequest(BaseModel):
     password: str
 
-def verify_session(calories_tracker_session: Optional[str] = Cookie(None)):
-    if calories_tracker_session != "authenticated":
+def verify_session(authorization: Optional[str] = Header(None)):
+    if not authorization:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    return calories_tracker_session
+    
+    # Bearer <token> format
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer" or token != AUTH_TOKEN:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid authorization header format")
+    
+    return token
 
 @app.post("/auth/login")
-def auth_login(login_data: LoginRequest, response: Response):
+def auth_login(login_data: LoginRequest):
     if login_data.password == APP_PASSWORD:
-        # For cross-site (Render <-> Vercel), we MUST use samesite="none" and secure=True
-        response.set_cookie(
-            key=SESSION_COOKIE_NAME,
-            value="authenticated",
-            httponly=True,
-            samesite="none",
-            secure=True,
-            max_age=86400 * 30
-        )
-        return {"ok": True, "message": "Login successful"}
+        # Instead of a cookie, we return a token for the client to store in localStorage
+        return {"ok": True, "token": AUTH_TOKEN, "message": "Login successful"}
     else:
         raise HTTPException(status_code=401, detail="Invalid password")
 
 @app.get("/auth/check")
-def auth_check(calories_tracker_session: Optional[str] = Cookie(None)):
-    if calories_tracker_session == "authenticated":
+def auth_check(authorization: Optional[str] = Header(None)):
+    try:
+        verify_session(authorization)
         return {"authenticated": True}
-    return {"authenticated": False}
+    except:
+        return {"authenticated": False}
 
 @app.post("/auth/logout")
-def auth_logout(response: Response):
-    response.delete_cookie(
-        SESSION_COOKIE_NAME,
-        samesite="none",
-        secure=True
-    )
+def auth_logout():
+    # Logout is handled on the client side by removing the token
     return {"ok": True}
 
 @app.get("/")
