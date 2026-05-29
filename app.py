@@ -10,7 +10,7 @@ import certifi
 from pydantic import BaseModel
 import secrets
 
-from models import FoodItem, FoodItemCreate
+from models import FoodItem, FoodItemCreate, Users
 
 # Load environment variables from the root directory
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
@@ -137,7 +137,7 @@ def add_food(
 
 @app.delete("/foods/{food_id}")
 def delete_food(
-    food_id: str, 
+    food_id: int, 
     session: Session = Depends(get_session), 
     _auth: str = Depends(verify_session)
 ):
@@ -147,3 +147,63 @@ def delete_food(
     session.delete(food)
     session.commit()
     return {"ok": True}
+
+class FoodItemUpdate(BaseModel):
+    name: Optional[str] = None
+    calories: Optional[int] = None
+    protein: Optional[int] = None
+    category: Optional[str] = None
+
+@app.patch("/foods/{food_id}", response_model=FoodItem)
+def update_food(
+    food_id: int,
+    food_update: FoodItemUpdate,
+    session: Session = Depends(get_session),
+    _auth: str = Depends(verify_session)
+):
+    db_food = session.get(FoodItem, food_id)
+    if not db_food:
+        raise HTTPException(status_code=404, detail="Food not found")
+    
+    update_data = food_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_food, key, value)
+    
+    session.add(db_food)
+    session.commit()
+    session.refresh(db_food)
+    return db_food
+
+
+@app.get("/user")
+def get_user(
+    session: Session = Depends(get_session),
+    _auth: str = Depends(verify_session)
+):
+    user = session.exec(select(Users)).first()
+
+    return user
+
+class UserUpdateTargets(BaseModel):
+    target_calories: Optional[float] = None
+    target_protein: Optional[float] = None
+
+@app.patch("/user/targets")
+def update_user_targets(
+    targets: UserUpdateTargets,
+    session: Session = Depends(get_session),
+    _auth: str = Depends(verify_session)
+):
+    user = session.exec(select(Users)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if targets.target_calories is not None:
+        user.target_calories = targets.target_calories
+    if targets.target_protein is not None:
+        user.target_protein = targets.target_protein
+        
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user

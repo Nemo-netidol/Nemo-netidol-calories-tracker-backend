@@ -18,3 +18,15 @@ class FoodItem(FoodItemBase, table=True):
     # Ensure date and time are provided or generated locally
     time: str = Field(default_factory=lambda: datetime.now().strftime("%I:%M %p"))
     date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
+
+
+class Users(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str
+    weight: float
+    target_calories: float
+    target_protein: float
+    tdee: float
+    bmr: float
+
+
