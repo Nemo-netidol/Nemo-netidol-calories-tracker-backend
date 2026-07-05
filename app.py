@@ -57,10 +57,20 @@ app = FastAPI(title="Calories Tracker API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
         "https://calories-tracker-ten.vercel.app",
     ],
+    # Vite picks the next free port (3001, 3002, ...) whenever 3000 is taken, so match
+    # any localhost port. Also allow any private-network IP (phone hotspot / LAN testing,
+    # e.g. http://172.20.10.4:3000) and VS Code/Cursor port-forwarding (Dev Tunnels), whose
+    # hostname carries a random tunnel id that changes each session, e.g.
+    # https://abcd1234-3000.usw2.devtunnels.ms.
+    allow_origin_regex=(
+        r"http://(localhost|127\.0\.0\.1"
+        r"|10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+        r"|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}"
+        r"|192\.168\.\d{1,3}\.\d{1,3}):\d+"
+        r"|https://.*\.devtunnels\.ms"
+    ),
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
@@ -152,7 +162,11 @@ class FoodItemUpdate(BaseModel):
     name: Optional[str] = None
     calories: Optional[int] = None
     protein: Optional[int] = None
+    carbs: Optional[int] = None
+    fat: Optional[int] = None
     category: Optional[str] = None
+    date: Optional[str] = None
+    time: Optional[str] = None
 
 @app.patch("/foods/{food_id}", response_model=FoodItem)
 def update_food(
@@ -187,6 +201,8 @@ def get_user(
 class UserUpdateTargets(BaseModel):
     target_calories: Optional[float] = None
     target_protein: Optional[float] = None
+    target_carbs: Optional[float] = None
+    target_fat: Optional[float] = None
 
 @app.patch("/user/targets")
 def update_user_targets(
@@ -197,12 +213,16 @@ def update_user_targets(
     user = session.exec(select(Users)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     if targets.target_calories is not None:
         user.target_calories = targets.target_calories
     if targets.target_protein is not None:
         user.target_protein = targets.target_protein
-        
+    if targets.target_carbs is not None:
+        user.target_carbs = targets.target_carbs
+    if targets.target_fat is not None:
+        user.target_fat = targets.target_fat
+
     session.add(user)
     session.commit()
     session.refresh(user)

@@ -6,6 +6,8 @@ class FoodItemBase(SQLModel):
     name: str = Field(index=True)
     calories: int
     protein: int
+    carbs: Optional[int] = None
+    fat: Optional[int] = None
     category: str
     date: Optional[str] = None
     time: Optional[str] = None
@@ -26,6 +28,8 @@ class Users(SQLModel, table=True):
     weight: float
     target_calories: float
     target_protein: float
+    target_carbs: float = 0
+    target_fat: float = 0
     tdee: float
     bmr: float
 
