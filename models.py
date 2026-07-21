@@ -5,7 +5,7 @@ from datetime import datetime
 class FoodItemBase(SQLModel):
     name: str = Field(index=True)
     calories: int
-    protein: int
+    protein: float
     carbs: Optional[int] = None
     fat: Optional[int] = None
     category: str

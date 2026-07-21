@@ -161,7 +161,7 @@ def delete_food(
 class FoodItemUpdate(BaseModel):
     name: Optional[str] = None
     calories: Optional[int] = None
-    protein: Optional[int] = None
+    protein: Optional[float] = None
     carbs: Optional[int] = None
     fat: Optional[int] = None
     category: Optional[str] = None
